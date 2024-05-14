@@ -3,11 +3,12 @@
 import { NextResponse } from "next/server";
 
 export async function middleware(req) {
-  console.log("test");
   if (req.nextUrl.pathname === "/middleware-redirect") {
-    console.log("tes12t");
-    return NextResponse.redirect(
+    console.log("redirecting");
+    const response = NextResponse.redirect(
       new URL("/middleware-redirect-destination", req.url)
     );
+    response.headers.set(`x-middleware-cache`, `no-cache`);
+    return response;
   }
 }
