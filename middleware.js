@@ -8,7 +8,7 @@ export async function middleware(req) {
     const response = NextResponse.redirect(
       new URL("/middleware-redirect-destination", req.url)
     );
-    response.headers.set(`x-middleware-cache`, `no-cache`);
+    // response.headers.set(`x-middleware-cache`, `no-cache`);
     return response;
   }
 }
