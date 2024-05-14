@@ -1,0 +1,69 @@
+---
+steps:
+  - id: init-volume
+    name: ubuntu
+    entrypoint: bash
+    args:
+      - -c
+      - chmod -R ugo+rw /output_bundle /workspace /env
+    volumes:
+      - name: output_bundle
+        path: /output_bundle
+      - name: env
+        path: /env
+
+  - id: preparer
+    name: gcr.io/buildpacks/firebase-app-hosting-22/builder:latest
+    entrypoint: /bin/preparer
+    args:
+      - --apphostingenv_filepath
+      - /workspace/apphosting.env
+      - --project_id
+      - $PROJECT_ID
+      - --env_referenced_output_filepath
+      - /env/vars_with_secret_references
+      - --env_dereferenced_output_filepath
+      - /env/vars_with_secret_values
+    volumes:
+      - name: output_bundle
+        path: /output_bundle
+      - name: env
+        path: /env
+
+  - id: build-from-source
+    name: gcr.io/k8s-skaffold/pack
+    entrypoint: pack
+    args:
+      - build
+      - $LOCATION-docker.pkg.dev/$PROJECT_ID/firestack-images/app-image:localbuild
+      - --network
+      - cloudbuild
+      - --builder
+      - gcr.io/buildpacks/firebase-app-hosting-22/builder:latest
+      - --volume
+      - output_bundle:/output_bundle:rw
+      - --trust-builder
+      - --env-file
+      - /env/vars_with_secret_values
+      - --env
+      - FIREBASE_OUTPUT_BUNDLE_DIR=/output_bundle
+    volumes:
+      - name: output_bundle
+        path: /output_bundle
+      - name: env
+        path: /env
+
+  - id: publisher
+    name: gcr.io/buildpacks/firebase-app-hosting-22/builder:latest
+    entrypoint: /bin/bash
+    args:
+      - -c
+      - /bin/publisher --apphostingyaml_filepath /workspace/apphosting.yaml --output_bundle_dir /output_bundle --env_filepath /env/vars_with_secret_values --output_filepath $$BUILDER_OUTPUT/output
+    volumes:
+      - name: output_bundle
+        path: /output_bundle
+      - name: env
+        path: /env
+images:
+  - $LOCATION-docker.pkg.dev/$PROJECT_ID/firestack-images/app-image:localbuild
+
